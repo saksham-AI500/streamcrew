@@ -1,0 +1,18 @@
+{
+  "metadata": {
+    "message_id": "fixture-marker-001",
+    "message_type": "action",
+    "subscription_type": "marker.created"
+  },
+  "payload": {
+    "action": "create_marker",
+    "status": "sent",
+    "source": "synthetic-fixture",
+    "description": "Synthetic chat spike",
+    "marker": {
+      "id": "fixture-marker-001",
+      "description": "Synthetic chat spike",
+      "position_seconds": 120
+    }
+  }
+}

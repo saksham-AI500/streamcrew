@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "message_id": "fixture-raid-001",
+    "message_type": "notification",
+    "subscription_type": "channel.raid"
+  },
+  "payload": {
+    "event": {
+      "from_broadcaster_user_id": "mock-friend-42",
+      "from_broadcaster_user_login": "mockfriend",
+      "viewers": 27
+    }
+  }
+}

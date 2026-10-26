@@ -1,0 +1,17 @@
+{
+  "id": "raid-thanks",
+  "event": "channel.raid",
+  "conditions": {
+    "viewers": {
+      "gte": 10
+    }
+  },
+  "actions": [
+    {
+      "action": "send_shoutout",
+      "to_broadcaster_id": "{{from_broadcaster_user_id}}"
+    }
+  ],
+  "cooldown_seconds": 60,
+  "mode": "dry_run"
+}
