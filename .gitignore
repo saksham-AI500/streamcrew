@@ -10,3 +10,5 @@ dist/
 *.db
 *.sqlite
 *.log
+data/
+OPENCODE_HANDOFF.md

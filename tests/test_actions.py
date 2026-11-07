@@ -169,3 +169,39 @@ def test_delete_requires_specific_message_to_avoid_clear_all() -> None:
     action = {"action": "delete_message"}
     with pytest.raises(ActionError, match="message_id"):
         execute_action(action, "approve", Settings())
+
+
+def test_chat_api_accepted_but_not_sent_is_reported_as_failure() -> None:
+    def not_sent(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"data": [{"is_sent": False}]})
+
+    action = {"action": "send_chat_message", "message": "Hello"}
+    with httpx.Client(transport=httpx.MockTransport(not_sent)) as client:
+        with pytest.raises(ActionError, match="did not send"):
+            execute_action(action, "auto", Settings(), client)
+
+
+@pytest.mark.parametrize(
+    ("action", "message"),
+    [
+        ({"action": "not_supported"}, "allow-list"),
+        ({"action": "send_chat_message", "message": "Hello", "extra": "bad"}, "unsupported fields"),
+        ({"action": "send_chat_message"}, "message"),
+        ({"action": "send_chat_message", "message": "x" * 501}, "500 characters"),
+        (
+            {"action": "send_announcement", "message": "Hello", "color": "cyan"},
+            "Announcement color",
+        ),
+        (
+            {"action": "create_marker", "description": "x" * 141},
+            "140 characters",
+        ),
+        (
+            {"action": "ban_user", "user_id": "viewer-id", "duration": 1_209_601},
+            "duration",
+        ),
+    ],
+)
+def test_invalid_action_fields_are_rejected_even_in_dry_run(action, message):
+    with pytest.raises(ActionError, match=message):
+        execute_action(action, "dry_run", Settings())

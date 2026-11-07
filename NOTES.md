@@ -155,3 +155,158 @@ and CLI are intentionally deferred.
   page, and no Twitch action was sent. Open questions: none for Phase 9.
 - 2026-10-26 — Repository upload complete: https://github.com/saksham-AI500/streamcrew
   Commit: `48dbb87`. Pushed to GitHub, secrets excluded.
+- 2026-10-27 — Access token renewed via refresh.
+- 2026-10-27 — Phase A1 real-Twitch retry: all four POSTs returned HTTP 202
+  with status `enabled` within 1.19 seconds of `session_welcome`. Immediate
+  subscription-list readback showed `stream.online`, `stream.offline`, and
+  `channel.follow` as enabled, but did not show `channel.raid`. The socket
+  ended with `EventSub keepalive timed out` before the requested 60-second
+  observation; no notification was logged. All four test subscription IDs
+  were deleted individually after confirmation, and each was confirmed absent
+  from the list. No channel content was changed. Gate: FAIL.
+- 2026-10-27 — Live verification findings (cause unresolved; no code fix or
+  test added yet):
+  - Symptom: `channel.raid` POST succeeded with HTTP 202 and `enabled`, but the
+    immediate GET readback did not find it for the new session. Cause: not yet
+    determined; possible list propagation delay or verification matching
+    discrepancy. Fix: pending investigation. Test added: none; no production
+    code defect is confirmed.
+  - Symptom: the 60-second WebSocket observation exited with
+    `EventSub keepalive timed out` before 60 seconds. Cause: no application
+    message arrived within the welcome's advertised keepalive timeout; whether
+    Twitch closed the socket or a keepalive was missed is undetermined. Fix:
+    pending investigation. Test added: none.
+- 2026-10-27 — Project completion audit: `main` is checked out; the
+  `frontend-overlay` branch points to the same commit and contains no unique
+  changes. The existing live listener (PID 58652) was still running. The
+  database contains historical mock events and no chat messages at audit time.
+  `.env`, `.venv/`, databases, and logs are ignored; `.env` is not staged or
+  tracked, and configured secret/token values matched neither current candidate
+  files nor Git history.
+- 2026-10-27 — Layer 1 integration fix: `crew listen` previously stored
+  notifications without evaluating rules or passing chat messages to the
+  highlight detector. Added a notification callback invoked only after a fresh
+  event is saved, wired the existing engine and detector into the listener,
+  and added regression tests. Dry-run remains guarded by `DRY_RUN=true`.
+  Reduced dry-run log details so rendered chat text and user IDs are not logged.
+  The EventSub timeout tests use virtual time for the five-second grace period;
+  a local WebSocket test confirms automatic Pong handling. Full suite: 71 passed,
+  1 Starlette/httpx deprecation warning. Full `/events` and `/approvals` reads
+  now require `LOCAL_API_TOKEN`; the overlay uses summary-only routes that omit
+  chat payloads and action parameters, and `/health` checks storage readiness.
+  Action validation follows current Twitch field limits, rejects unknown action
+  fields, and a chat API `is_sent: false` response is treated as failure.
+- Bug record — Live events were saved but never reached the configured rule
+  engine or highlight detector. Cause: `crew listen` connected storage and
+  subscriptions only. Fix: added a callback after successful deduplicated
+  storage and wired the CLI to the existing processor. Test added:
+  `test_notification_callback_runs_only_after_first_store` and
+  `test_saved_raid_notification_runs_matching_rule_in_dry_run`.
+- Bug record — Dry-run rule logs could include rendered chat text or user IDs.
+  Cause: the engine logged the full rendered action dictionary. Fix: logs now
+  identify only the planned action. Test added:
+  `test_dry_run_log_does_not_include_rendered_chat_content`.
+- Bug record — Unauthenticated local API reads returned full event payloads and
+  approval action parameters to the OBS page. Cause: the overlay called the
+  same full-data routes used by local clients. Fix: full reads now require the
+  local API token; overlay routes expose type/time and approval metadata only.
+  Test added: `test_events_and_pending_approvals_are_readable` verifies both
+  authentication and summary redaction.
+- Bug record — Twitch's chat API can return HTTP 200 with `is_sent: false`,
+  which the action layer previously called sent. Cause: success was based only
+  on the HTTP status. Fix: the response body is checked and a non-sent result
+  raises `ActionError`. Test added:
+  `test_chat_api_accepted_but_not_sent_is_reported_as_failure`.
+- 2026-10-27 — Hackathon rules checked: Codex x TwitchCon requires the project
+  to be newly built during its Oct 23–Nov 2 submission period, with repository,
+  Codex session ID, feature description, and a public YouTube demo under three
+  minutes. The existing project commits are dated Oct 26. Flip the Switch runs
+  Nov 4–7 and requires Switch to be central to a real team-chat workflow.
+  Switch uses an agent protocol (SSE down, HTTP up). Docker/Switch Console and
+  Switch bridge/agent credentials are not present in this workspace, so a live
+  Switch room test remains blocked on setup. No actual submission was made.
+- 2026-10-27 — OpenCode takeover audit (no Twitch call, no listener restart):
+  `main` at `3d9ccc3` with the existing dirty Layer 1 worktree preserved.
+  Baseline: 71 tests passed, 1 Starlette/httpx warning; `pip check`,
+  `compileall`, `crew --help`, and `git diff --check` passed. Read-only SQLite
+  audit: 13 events (`stream.online` 7, `stream.offline` 2, `channel.raid` 2,
+  `channel.follow` 2), no chat event, no approvals, no cooldowns. A temporary
+  `crew serve` process returned `/health` 200, `/overlay/events` 200 with
+  summaries, `/overlay/approvals` 200 with an empty list, and `/overlay` 200;
+  unauthenticated `/events` and `/approvals` returned 401. Headless Chrome
+  rendered “Connected to local crew” with the stored event rows and the empty
+  marker/approval messages. The screenshot’s “Local crew unavailable” state was
+  because `crew serve` was not running, not an API defect.
+- 2026-10-27 — Listener process note: PID 58652 is still running `crew listen`
+  and had an established TLS connection when checked, but it started at 09:59,
+  before `event_processor.py`/`cli.py` (10:53) and `eventsub.py` (11:01) were
+  changed. It therefore is not proof that the current processing and keepalive
+  code is active. It was not stopped or restarted. The A2 real-chat gate is
+  still waiting for the human `chat sent` signal; no chat row exists.
+- Bug record — When SQLite became unavailable, `/health` returned 503 but
+  `/events`, `/approvals`, `/overlay/events`, and `/overlay/approvals` raised an
+  unhandled `sqlite3.ProgrammingError` (HTTP 500), and approval decisions did
+  the same. Cause: only `/health` caught storage errors. Fix: all storage reads
+  and approval decisions now return HTTP 503 “Storage unavailable”. Tests
+  added: `test_storage_failure_returns_service_unavailable_not_server_error`
+  and `test_empty_database_returns_empty_overlay_summaries`.
+- Bug record — `scripts/check_setup.py` printed the first four characters of
+  the client ID, access token, and client secret. Cause: its “masked” helper
+  included a value prefix. Fix: the helper now prints only `set` or `missing`.
+  Test added: `test_setup_report_never_prints_credential_values`.
+- 2026-10-27 — Added an end-to-end local regression test that passes a fresh
+  raid notification through `EventSubClient.handle_message` into
+  `EventProcessor`, verifies the rule cooldown was written, and verifies a
+  duplicate frame does not run twice:
+  `test_fresh_eventsub_notification_reaches_processor_through_client`.
+  Full suite after these changes: 75 passed, 1 Starlette/httpx warning.
+- 2026-10-27 — Cooldown bug fixed: an auto-mode rule stored its cooldown
+  before calling the action layer, so a failed Twitch action suppressed retries
+  until the cooldown expired. Cooldowns are now recorded only after a dry-run
+  plan, a queued approval, or a successful auto action. Tests added:
+  `test_failed_auto_action_does_not_consume_the_rule_cooldown` and
+  `test_successful_auto_action_records_the_rule_cooldown`.
+- 2026-10-27 — EventSub authentication close fixed: a WebSocket close with code
+  4004 returned to the run loop, which immediately reconnected with no delay.
+  The listener now logs a clear authentication error, stops reconnecting, and
+  asks for the token to be refreshed before restart. Test added:
+  `test_authentication_close_4004_stops_without_reconnecting`. The close-code
+  check also avoids the deprecated `ConnectionClosed.code` accessor.
+- 2026-10-27 — Overlay truthfulness improved: on an API/fetch failure the page
+  previously left stale event/approval rows visible while only changing the
+  header text. It now clears all three panels, shows `Local crew unavailable.`
+  in each, and displays loading states before the first response. Verified with
+  headless Chrome against both a healthy API (10 event rows, connected state)
+  and a static server whose API requests fail (no stale rows, unavailable
+  state). Static-state assertion added:
+  `test_overlay_page_has_loading_and_unavailable_states`.
+- 2026-10-27 — Added configuration tests for missing required values, invalid
+  `DRY_RUN`, and the safe dry-run default, plus a CLI test confirming
+  `crew listen` prints a configuration error reason while still withholding
+  other exception text.
+- 2026-10-27 — Added `crew events --metadata-only`, which prints event IDs and
+  subscription metadata without decoded payloads or chat bodies. This makes
+  the pending live-chat check privacy-safe. Test added:
+  `test_cli_events_metadata_only_omits_message_body`. Full suite after all
+  changes: 84 passed, 1 Starlette/httpx warning.
+
+- 2026-10-27 — With explicit authorization, stopped the old listener (PID
+  58652) with SIGINT and started the current code as PID 74598. It connected to
+  EventSub and created enabled subscriptions for `stream.online`,
+  `stream.offline`, `channel.chat.message`, `channel.raid`, `channel.follow`,
+  and `channel.chat.notification` (all HTTP 202, cost 0). Metadata-only event
+  inspection still shows no `channel.chat.message` row. The live chat check
+  remains pending a human-confirmed message; no payload was read or recorded.
+
+- 2026-11-05 — Step 0 doc reconciliation: database path hardcoded to data/events.sqlite3 (DB_PATH unused), table named rule_cooldowns (no WAL mode), rules load at startup only, and /events and /approvals require X-Local-Token.
+
+- 2026-11-05 — Step 1 (R3) PASS: added pure spam detector in src/streamcrew/spam.py, SRS config defaults in src/streamcrew/config.py, burst/quiet fixtures, and 12 unit/fixture/performance tests in tests/test_spam.py.
+- 2026-11-05 — Steps 2–4 (R4, R6, R5) + R8/R10/Overlay PASS: wired grouped spam approval (cap 25) in event_processor.py, crew simulate spam, paced per-target execution and transactional claim in approvals.py/storage.py, crew rules ship, redact.py, and polished 1280x720 overlay UI (102 passed).
+
+- 2026-11-06 — Switch Hackathon rules & cut-off verified: Flip the Switch Hackathon (WeMakeDevs x DevTools Academy, powered by Switch AI). Submission deadline is November 7, 2026 at 11:59 PM IST. Judging criteria: (1) Use of Switch, (2) Technical execution, (3) Creativity & impact, (4) Presentation & demo video. Pre-event engine code is permitted because the challenge is connecting the agent workflow to chat via Switch.
+- 2026-11-06 — Resolved critical audit issues:
+  1. Approval locking & count verification: pending approvals lock when listed/viewed (`locked: True`) to prevent silent target expansion during continuing raids; `crew approve <id> --count <N>` rejects execution if target count changed.
+  2. Safe alt-account testing: added `crew simulate test-alt --user-id <id> --login <login>` to prevent accidental moderation of fixture account IDs when testing with `DRY_RUN=false`.
+  3. Switch agent interaction model: Switch agents are reactive (trigger on `@mention`). Demo Workflow A starts with human asking `@crew-mod what's pending?`.
+  4. Details verified & reconciled: `crew approvals approve <id>` added as CLI alias for `crew approve <id>`; 1,000-message benchmark verified at 10.78 ms (< 100 ms budget); 0.5s pacing verified by sleep tests (yields 120 req/min within Twitch Helix limits); `crew simulate` writes to real database (`data/events.sqlite3`); dynamic rule reloading added to `EventProcessor` via `rules_loader` so `crew rules ship` rules take effect without restarting `crew listen`. Total tests: 107 passed, 0 failed.
+- 2026-11-07 — R2, R7 & R10 PASS: Switch Console + Docker Mattermost + `@crew-mod` proven live in `#stream-ops` (Workflow A table & approval verified); added `--by <name>` audit trail to `crew approve`/`reject`, `.env.example` zero-config fallback when `.env` is absent, and updated `README.md` with Switch architecture and honest limits (108 passed, 0 failed).

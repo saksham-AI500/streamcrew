@@ -1,0 +1,76 @@
+{
+  "messages": [
+    {
+      "metadata": {
+        "message_id": "spam-quiet-001",
+        "message_type": "notification",
+        "subscription_type": "channel.chat.message",
+        "message_timestamp": "2026-11-05T12:00:01Z"
+      },
+      "payload": {
+        "event": {
+          "chatter_user_id": "viewer-101",
+          "chatter_user_login": "viewer_one",
+          "chatter_user_name": "Viewer_One",
+          "message": {
+            "text": "hello everyone, excited for the stream"
+          }
+        }
+      }
+    },
+    {
+      "metadata": {
+        "message_id": "spam-quiet-002",
+        "message_type": "notification",
+        "subscription_type": "channel.chat.message",
+        "message_timestamp": "2026-11-05T12:00:03Z"
+      },
+      "payload": {
+        "event": {
+          "chatter_user_id": "viewer-102",
+          "chatter_user_login": "viewer_two",
+          "chatter_user_name": "Viewer_Two",
+          "message": {
+            "text": "what build are we running today?"
+          }
+        }
+      }
+    },
+    {
+      "metadata": {
+        "message_id": "spam-quiet-003",
+        "message_type": "notification",
+        "subscription_type": "channel.chat.message",
+        "message_timestamp": "2026-11-05T12:00:05Z"
+      },
+      "payload": {
+        "event": {
+          "chatter_user_id": "viewer-103",
+          "chatter_user_login": "viewer_three",
+          "chatter_user_name": "Viewer_Three",
+          "message": {
+            "text": "nice dodge on that attack"
+          }
+        }
+      }
+    },
+    {
+      "metadata": {
+        "message_id": "spam-quiet-004",
+        "message_type": "notification",
+        "subscription_type": "channel.chat.message",
+        "message_timestamp": "2026-11-05T12:00:07Z"
+      },
+      "payload": {
+        "event": {
+          "chatter_user_id": "viewer-104",
+          "chatter_user_login": "viewer_four",
+          "chatter_user_name": "Viewer_Four",
+          "message": {
+            "text": "sound levels are good here"
+          }
+        }
+      }
+    }
+  ]
+}

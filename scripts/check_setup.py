@@ -14,29 +14,19 @@ from streamcrew.config import load_config  # noqa: E402
 from streamcrew.twitch_auth import validate_token  # noqa: E402
 
 
-def _report_setting(name: str, value: str, *, secret: bool = False) -> None:
-    if not value:
-        print(f"{name}: missing")
-    elif secret:
-        print(f"{name}: set ({value[:4]}…)")
-    else:
-        print(f"{name}: set")
+def _report_setting(name: str, value: str) -> None:
+    """Report only whether a setting exists; never print any of its value."""
+    print(f"{name}: {'set' if value else 'missing'}")
 
 
 def main() -> int:
     try:
         settings = load_config(PROJECT_ROOT / ".env")
-        _report_setting("TWITCH_CLIENT_ID", settings.twitch_client_id, secret=True)
-        _report_setting(
-            "TWITCH_USER_ACCESS_TOKEN",
-            settings.twitch_user_access_token,
-            secret=True,
-        )
+        _report_setting("TWITCH_CLIENT_ID", settings.twitch_client_id)
+        _report_setting("TWITCH_USER_ACCESS_TOKEN", settings.twitch_user_access_token)
         _report_setting("TWITCH_BROADCASTER_ID", settings.twitch_broadcaster_id)
         _report_setting("DRY_RUN", os.getenv("DRY_RUN", "true"))
-        _report_setting(
-            "TWITCH_CLIENT_SECRET", os.getenv("TWITCH_CLIENT_SECRET", ""), secret=True
-        )
+        _report_setting("TWITCH_CLIENT_SECRET", os.getenv("TWITCH_CLIENT_SECRET", ""))
 
         result = validate_token(settings)
         print(

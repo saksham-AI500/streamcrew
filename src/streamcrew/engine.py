@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
-from .actions import record_marker_result
+from .actions import record_marker_result, validate_action
 from .rules import conditions_match, render_value, validate_rule
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,11 @@ class RuleEngine:
         self._last_run_by_rule[rule_id] = value
         return value
 
+    def _record_run(self, rule_id: str, now: datetime) -> None:
+        """Persist a cooldown only after work was planned, queued, or sent."""
+        self._last_run_by_rule[rule_id] = now
+        self.store.set_rule_cooldown(rule_id, now)
+
     def run_rule(
         self,
         rule: dict[str, Any],
@@ -61,24 +66,25 @@ class RuleEngine:
             logger.info("Rule %s is in cooldown.", normalized["id"])
             return [{"status": "cooldown", "rule_id": normalized["id"]}]
 
-        self._last_run_by_rule[normalized["id"]] = now
-        self.store.set_rule_cooldown(normalized["id"], now)
+        rendered_actions = [render_value(action, payload) for action in normalized["actions"]]
+        for action in rendered_actions:
+            validate_action(action)
 
         results: list[dict[str, Any]] = []
-        for action in normalized["actions"]:
-            rendered = render_value(action, payload)
+        for rendered in rendered_actions:
             action_name = rendered["action"]
             if normalized["mode"] == "dry_run":
-                details = {key: value for key, value in rendered.items() if key != "action"}
+                # Action templates may contain private chat text or user IDs.
+                # Keep operational logs useful without copying those values.
                 message = f"would do {action_name}"
-                if details:
-                    message += f" with {details}"
                 logger.info("%s", message)
+                self._record_run(normalized["id"], now)
                 results.append(
                     {"status": "dry_run", "message": message, "action": rendered}
                 )
             elif normalized["mode"] == "approve":
                 approval_id = self.store.save_approval(normalized["id"], rendered)
+                self._record_run(normalized["id"], now)
                 logger.info(
                     "Rule %s queued %s for approval (id %s).",
                     normalized["id"],
@@ -98,6 +104,9 @@ class RuleEngine:
                         "Auto mode requires the action layer, which is not available yet."
                     )
                 outcome = self.action_executor(rendered, normalized["mode"])
+                # The external action succeeded, so record the cooldown before
+                # any optional local marker bookkeeping.
+                self._record_run(normalized["id"], now)
                 if action_name == "create_marker":
                     record_marker_result(
                         self.store, rendered, outcome, source=normalized["id"]

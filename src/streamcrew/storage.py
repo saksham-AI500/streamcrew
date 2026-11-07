@@ -185,25 +185,81 @@ class SQLiteEventStore:
         decided_at: str | None = None,
         decided_by: str | None = None,
         expected_status: str | None = None,
+        action_json: Any | None = None,
     ) -> bool:
-        """Update an approval, optionally only while it has an expected status."""
+        """Update an approval inside one transaction, checking expected_status."""
         if status not in {"pending", "approved", "rejected", "done", "failed"}:
             raise ValueError("Unsupported approval status.")
-        if decided_at is None and decided_by is None:
-            query = "UPDATE approvals SET status = ? WHERE id = ?"
-            values: tuple[Any, ...] = (status, approval_id)
-        else:
-            query = (
-                "UPDATE approvals SET status = ?, decided_at = ?, decided_by = ? "
-                "WHERE id = ?"
+        assignments = ["status = ?"]
+        values: list[Any] = [status]
+        if decided_at is not None or decided_by is not None:
+            assignments.extend(["decided_at = ?", "decided_by = ?"])
+            values.extend([decided_at, decided_by])
+        if action_json is not None:
+            serialized = (
+                action_json
+                if isinstance(action_json, str)
+                else json.dumps(action_json, separators=(",", ":"))
             )
-            values = (status, decided_at, decided_by, approval_id)
+            assignments.append("action_json = ?")
+            values.append(serialized)
+        query = f"UPDATE approvals SET {', '.join(assignments)} WHERE id = ?"
+        values.append(approval_id)
         if expected_status is not None:
             query += " AND status = ?"
-            values += (expected_status,)
-        cursor = self._connection.execute(query, values)
-        self._connection.commit()
+            values.append(expected_status)
+        with self._connection:
+            cursor = self._connection.execute(query, tuple(values))
         return cursor.rowcount == 1
+
+    @_serialized
+    def claim_pending_approval(
+        self,
+        approval_id: int,
+        *,
+        decided_at: str,
+        decided_by: str = "cli",
+        expected_count: int | None = None,
+    ) -> dict[str, Any] | None:
+        """Check status is pending and mark approved inside one transaction."""
+        with self._connection:
+            cursor = self._connection.execute(
+                "SELECT * FROM approvals WHERE id = ?", (approval_id,)
+            )
+            row = cursor.fetchone()
+            if row is None:
+                return None
+            record = dict(
+                zip((col[0] for col in cursor.description), row, strict=True)
+            )
+            if record.get("status") != "pending":
+                return None
+            if expected_count is not None:
+                try:
+                    action_data = json.loads(record.get("action_json", "{}"))
+                    targets = action_data.get("targets")
+                    actual_count = (
+                        len(targets)
+                        if isinstance(targets, list)
+                        else action_data.get("summary", {}).get("accounts", 1)
+                    )
+                except Exception:
+                    actual_count = 1
+                if actual_count != expected_count:
+                    raise ValueError(
+                        f"target count mismatch: approval {approval_id} has {actual_count} targets, expected {expected_count}"
+                    )
+            updated = self._connection.execute(
+                "UPDATE approvals SET status = 'approved', decided_at = ?, decided_by = ? "
+                "WHERE id = ? AND status = 'pending'",
+                (decided_at, decided_by, approval_id),
+            )
+            if updated.rowcount != 1:
+                return None
+            record["status"] = "approved"
+            record["decided_at"] = decided_at
+            record["decided_by"] = decided_by
+            return record
 
     @_serialized
     def get_rule_cooldown(self, rule_id: str) -> str | None:

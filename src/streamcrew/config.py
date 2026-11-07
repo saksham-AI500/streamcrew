@@ -25,6 +25,38 @@ class Config:
     eventsub_subscriptions_url: str = (
         "https://api.twitch.tv/helix/eventsub/subscriptions"
     )
+    spam_min_accounts: int = 5
+    spam_window_seconds: int = 10
+    spam_cooldown_seconds: int = 60
+    spam_timeout_seconds: int = 600
+    group_cap: int = 25
+    action_pacing_seconds: float = 0.5
+
+
+def _env_int(name: str, default: int, *, minimum: int = 0) -> int:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = int(raw.strip())
+    except ValueError as error:
+        raise ValueError(f"{name} must be an integer.") from error
+    if value < minimum:
+        raise ValueError(f"{name} must be at least {minimum}.")
+    return value
+
+
+def _env_float(name: str, default: float, *, minimum: float = 0.0) -> float:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = float(raw.strip())
+    except ValueError as error:
+        raise ValueError(f"{name} must be a number.") from error
+    if value < minimum:
+        raise ValueError(f"{name} must be at least {minimum}.")
+    return value
 
 
 def load_config(env_file: str | Path | None = None) -> Config:
@@ -38,6 +70,10 @@ def load_config(env_file: str | Path | None = None) -> Config:
         if env_file is not None
         else Path(__file__).resolve().parents[2] / ".env"
     )
+    if env_file is None and not resolved_env_file.exists():
+        example_file = Path(__file__).resolve().parents[2] / ".env.example"
+        if example_file.exists():
+            resolved_env_file = example_file
     load_dotenv(dotenv_path=resolved_env_file, override=False)
 
     required = {
@@ -73,4 +109,10 @@ def load_config(env_file: str | Path | None = None) -> Config:
             "EVENTSUB_SUBSCRIPTIONS_URL",
             "https://api.twitch.tv/helix/eventsub/subscriptions",
         ),
+        spam_min_accounts=_env_int("SPAM_MIN_ACCOUNTS", 5, minimum=1),
+        spam_window_seconds=_env_int("SPAM_WINDOW_SECONDS", 10, minimum=1),
+        spam_cooldown_seconds=_env_int("SPAM_COOLDOWN_SECONDS", 60, minimum=0),
+        spam_timeout_seconds=_env_int("SPAM_TIMEOUT_SECONDS", 600, minimum=1),
+        group_cap=_env_int("GROUP_CAP", 25, minimum=1),
+        action_pacing_seconds=_env_float("ACTION_PACING_SECONDS", 0.5, minimum=0.0),
     )

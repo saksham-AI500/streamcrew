@@ -14,6 +14,10 @@ from websockets.exceptions import ConnectionClosed
 
 logger = logging.getLogger(__name__)
 SubscribeCallback = Callable[[str], Awaitable[None] | None]
+NotificationCallback = Callable[[dict[str, Any]], Any]
+# Twitch keepalives can arrive very close to the advertised deadline; allow
+# scheduling and network jitter before treating a session as lost.
+KEEPALIVE_GRACE_SECONDS = 5
 
 
 class EventSubClient:
@@ -26,6 +30,8 @@ class EventSubClient:
         subscribe_callback: SubscribeCallback | None = None,
         websocket_connector: Callable[..., Any] | None = None,
         clock: Callable[[], datetime] | None = None,
+        wait_for: Callable[..., Awaitable[Any]] | None = None,
+        notification_callback: NotificationCallback | None = None,
     ) -> None:
         self.settings = settings
         self.store = store
@@ -33,6 +39,8 @@ class EventSubClient:
         self.subscribe_callback = subscribe_callback
         self.websocket_connector = websocket_connector or websockets.connect
         self.clock = clock or (lambda: datetime.now(timezone.utc))
+        self.wait_for = wait_for or asyncio.wait_for
+        self.notification_callback = notification_callback
         self._stop = asyncio.Event()
         self._active_websocket: Any | None = None
 
@@ -125,7 +133,18 @@ class EventSubClient:
         message = json.loads(raw_message)
         if message.get("metadata", {}).get("message_type") != "notification":
             return False
-        return self._handle_notification(message)
+        saved = self._handle_notification(message)
+        if saved and self.notification_callback is not None:
+            event_type = message.get("metadata", {}).get("subscription_type", "unknown")
+            try:
+                self.notification_callback(message)
+            except Exception as error:
+                logger.error(
+                    "EventSub processing failed for %s (%s).",
+                    event_type,
+                    type(error).__name__,
+                )
+        return saved
 
     async def _serve_connection(self) -> None:
         websocket = await self.connect()
@@ -134,14 +153,27 @@ class EventSubClient:
         try:
             while not self._stop.is_set():
                 try:
-                    raw = await asyncio.wait_for(
-                        websocket.recv(), timeout=keepalive_timeout
+                    raw = await self.wait_for(
+                        websocket.recv(),
+                        timeout=keepalive_timeout + KEEPALIVE_GRACE_SECONDS,
                     )
                 except asyncio.TimeoutError:
                     await self.handle_keepalive_timeout(websocket)
                 except ConnectionClosed as error:
                     await self.handle_close(websocket)
-                    if error.code == 4004:
+                    received_close = getattr(error, "rcvd", None)
+                    sent_close = getattr(error, "sent", None)
+                    close_code = getattr(received_close, "code", None)
+                    if close_code is None:
+                        close_code = getattr(sent_close, "code", None)
+                    if close_code is None:
+                        close_code = getattr(error, "code", None)
+                    if close_code == 4004:
+                        logger.error(
+                            "EventSub authentication failed (close code 4004); "
+                            "refresh the Twitch token and restart the listener."
+                        )
+                        self._stop.set()
                         return
                     raise
 
@@ -178,7 +210,7 @@ class EventSubClient:
                     retry_delay,
                 )
                 try:
-                    await asyncio.wait_for(self._stop.wait(), timeout=retry_delay)
+                    await self.wait_for(self._stop.wait(), timeout=retry_delay)
                 except asyncio.TimeoutError:
                     pass
                 retry_delay = min(retry_delay * 2, 60)

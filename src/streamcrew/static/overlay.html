@@ -5,47 +5,293 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>StreamCrew Overlay</title>
   <style>
-    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    :root {
+      color-scheme: dark;
+      --bg: #0b0f17;
+      --surface: rgba(18, 24, 38, 0.88);
+      --surface-raised: #171f30;
+      --border: #1f2a3d;
+      --text: #e6edf7;
+      --muted: #8b97ab;
+      --accent: #2dd4bf;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --dry-run: #64748b;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; width: 100%; min-height: 100vh; overflow-x: hidden; background: #090d18; color: #f2f5ff; }
-    header { height: 104px; padding: 22px 34px; display: flex; align-items: center; justify-content: space-between; background: #11182a; border-bottom: 1px solid #2a3550; }
-    h1 { margin: 0; font-size: 34px; letter-spacing: .02em; }
-    header p { margin: 6px 0 0; color: #aebbd7; font-size: 16px; }
-    #connection { color: #9ce7bd; font-size: 15px; }
-    main { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: minmax(0, 1fr) 230px; gap: 18px; padding: 20px; height: calc(100vh - 104px); }
-    section { min-height: 0; overflow: hidden; padding: 18px 20px; border: 1px solid #2a3550; border-radius: 14px; background: #11182a; }
-    section h2 { margin: 0 0 14px; color: #c8d6f5; font-size: 19px; text-transform: uppercase; letter-spacing: .08em; }
+    body {
+      margin: 0;
+      width: 100%;
+      min-height: 100vh;
+      max-width: 1280px;
+      max-height: 720px;
+      overflow: hidden;
+      background: transparent;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      -webkit-font-smoothing: antialiased;
+    }
+    .stage {
+      width: 100%;
+      height: 100vh;
+      max-height: 720px;
+      display: grid;
+      grid-template-rows: 76px minmax(0, 1fr) 36px;
+      gap: 16px;
+      padding: 16px 24px;
+      background: var(--bg);
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+    }
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .status-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .demo-pill {
+      display: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(251, 191, 36, 0.14);
+      border: 1px solid var(--warning);
+      color: var(--warning);
+      font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: 0.06em;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      font-size: 14px;
+      font-weight: 600;
+      transition: border-color 160ms ease, color 160ms ease;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+    .status-pill.offline {
+      border-color: rgba(248, 113, 113, 0.45);
+      color: var(--danger);
+    }
+    .status-pill.offline .status-dot {
+      background: var(--danger);
+    }
+    main {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      grid-template-rows: minmax(0, 1fr) 216px;
+      gap: 16px;
+      min-height: 0;
+    }
+    section {
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 20px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 0 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    section h2 {
+      margin: 0;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+    }
+    .badge {
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font: 600 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .badge.warn {
+      color: var(--warning);
+      border-color: rgba(251, 191, 36, 0.4);
+      background: rgba(251, 191, 36, 0.1);
+    }
     #events { grid-row: 1 / 3; }
-    .row { padding: 12px 0; border-top: 1px solid #25304a; }
-    .row:first-child { border-top: 0; }
-    .title { display: flex; justify-content: space-between; gap: 12px; font-size: 18px; font-weight: 650; }
-    time, .muted { color: #9eabc5; font-size: 14px; }
-    pre { margin: 7px 0 0; color: #c4cee3; font: 13px/1.4 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
-    .empty { padding: 18px 0; color: #9eabc5; font-size: 16px; }
-    .approval { color: #ffcf78; }
-    .marker { color: #a6f0ce; }
+    .list {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .row {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--surface-raised);
+      border: 1px solid transparent;
+      transition: border-color 150ms ease;
+    }
+    .title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 17px;
+      font-weight: 600;
+    }
+    .mono-type {
+      font: 600 15px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    time, .muted {
+      color: var(--muted);
+      font: 500 13px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+      flex-shrink: 0;
+    }
+    .subline {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .empty {
+      padding: 16px 4px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+    .approval {
+      border-color: rgba(251, 191, 36, 0.32);
+    }
+    .approval .mono-type {
+      color: var(--warning);
+    }
+    .marker {
+      border-color: rgba(52, 211, 153, 0.28);
+    }
+    .marker .mono-type {
+      color: var(--success);
+    }
+    footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, .status-pill, .row { transition: none !important; animation: none !important; }
+    }
     @media (max-width: 800px) {
-      header { height: auto; min-height: 92px; padding: 18px; }
-      h1 { font-size: 26px; }
-      main { height: auto; min-height: calc(100vh - 92px); grid-template-columns: 1fr; grid-template-rows: auto; padding: 12px; }
+      body, .stage { max-height: none; height: auto; overflow-y: auto; }
+      main { grid-template-columns: 1fr; grid-template-rows: auto; }
       #events { grid-row: auto; }
-      section { min-height: 220px; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <div><h1>StreamCrew</h1><p>Your stage crew, keeping an eye on the stream.</p></div>
-    <div id="connection" role="status">Connecting to local crew…</div>
-  </header>
-  <main>
-    <section id="events"><h2>Recent events</h2><div id="event-list" aria-live="polite"></div></section>
-    <section id="markers"><h2>Markers created</h2><div id="marker-list" aria-live="polite"></div></section>
-    <section id="approvals"><h2>Pending approvals</h2><div id="approval-list" aria-live="polite"></div></section>
-  </main>
+  <div class="stage">
+    <header>
+      <div class="brand">
+        <h1>StreamCrew</h1>
+        <p class="subtitle">Deterministic stage crew &amp; incident queue</p>
+      </div>
+      <div class="status-group">
+        <span id="demo-badge" class="demo-pill">DEMO DATA</span>
+        <div id="connection-pill" class="status-pill">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="connection" role="status">Connecting to local crew…</span>
+        </div>
+      </div>
+    </header>
+    <main>
+      <section id="events">
+        <div class="section-head">
+          <h2>Recent events</h2>
+          <span id="event-count" class="badge">0</span>
+        </div>
+        <div id="event-list" class="list" aria-live="polite">
+          <div class="empty">Loading recent events…</div>
+        </div>
+      </section>
+      <section id="approvals">
+        <div class="section-head">
+          <h2>Pending approvals</h2>
+          <span id="approval-count" class="badge">0</span>
+        </div>
+        <div id="approval-list" class="list" aria-live="polite">
+          <div class="empty">Loading pending approvals…</div>
+        </div>
+      </section>
+      <section id="markers">
+        <div class="section-head">
+          <h2>Markers created</h2>
+          <span id="marker-count" class="badge">0</span>
+        </div>
+        <div id="marker-list" class="list" aria-live="polite">
+          <div class="empty">Loading markers…</div>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <span>Guard: risky actions require human approval</span>
+      <span id="last-updated">Last update: —</span>
+    </footer>
+  </div>
   <script>
     "use strict";
     const connection = document.getElementById("connection");
+    const connectionPill = document.getElementById("connection-pill");
+    const lastUpdated = document.getElementById("last-updated");
+    const eventCount = document.getElementById("event-count");
+    const approvalCount = document.getElementById("approval-count");
+    const markerCount = document.getElementById("marker-count");
+    let inFlight = false;
 
     function addEmpty(target, message) {
       const item = document.createElement("div");
@@ -54,22 +300,27 @@
       target.replaceChildren(item);
     }
 
+    function formatTime(iso) {
+      const date = new Date(iso);
+      return Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString();
+    }
+
     function renderEvents(events) {
       const target = document.getElementById("event-list");
+      eventCount.textContent = String(events.length);
       if (!events.length) return addEmpty(target, "No events recorded yet.");
-      target.replaceChildren(...events.slice(0, 10).map((event) => {
+      target.replaceChildren(...events.slice(0, 8).map((event) => {
         const row = document.createElement("article");
         row.className = "row";
         const title = document.createElement("div");
         title.className = "title";
         const type = document.createElement("span");
+        type.className = "mono-type";
         type.textContent = event.subscription_type || event.message_type;
         const when = document.createElement("time");
-        when.textContent = new Date(event.received_at).toLocaleTimeString();
+        when.textContent = formatTime(event.received_at);
         title.append(type, when);
-        const detail = document.createElement("pre");
-        detail.textContent = JSON.stringify(event.payload, null, 2);
-        row.append(title, detail);
+        row.append(title);
         return row;
       }));
     }
@@ -77,51 +328,69 @@
     function renderMarkers(events) {
       const target = document.getElementById("marker-list");
       const markers = events.filter((event) => event.subscription_type === "marker.created");
+      markerCount.textContent = String(markers.length);
       if (!markers.length) return addEmpty(target, "No markers recorded yet.");
-      target.replaceChildren(...markers.slice(0, 10).map((event) => {
+      target.replaceChildren(...markers.slice(0, 3).map((event) => {
         const row = document.createElement("article");
         row.className = "row marker";
-        const marker = event.payload.marker || {};
         const title = document.createElement("div");
         title.className = "title";
         const description = document.createElement("span");
-        description.textContent = event.payload.description || marker.description || "Stream marker";
+        description.className = "mono-type";
+        description.textContent = "Stream marker created";
         const when = document.createElement("time");
-        when.textContent = new Date(event.received_at).toLocaleTimeString();
+        when.textContent = formatTime(event.received_at);
         title.append(description, when);
-        const detail = document.createElement("div");
-        detail.className = "muted";
-        detail.textContent = marker.position_seconds == null ? "Marker saved" : `${marker.position_seconds}s into stream`;
-        row.append(title, detail);
+        row.append(title);
         return row;
       }));
     }
 
     function renderApprovals(approvals) {
       const target = document.getElementById("approval-list");
+      approvalCount.textContent = String(approvals.length);
+      approvalCount.className = approvals.length ? "badge warn" : "badge";
       if (!approvals.length) return addEmpty(target, "Nothing waiting for approval.");
-      target.replaceChildren(...approvals.slice(0, 10).map((approval) => {
+      target.replaceChildren(...approvals.slice(0, 3).map((approval) => {
         const row = document.createElement("article");
         row.className = "row approval";
         const title = document.createElement("div");
         title.className = "title";
         const rule = document.createElement("span");
+        rule.className = "mono-type";
         rule.textContent = approval.rule_id;
         const id = document.createElement("span");
+        id.className = "muted";
         id.textContent = `#${approval.id}`;
         title.append(rule, id);
-        const detail = document.createElement("pre");
-        detail.textContent = approval.action_json;
-        row.append(title, detail);
+        row.append(title);
+        if (approval.action || approval.accounts) {
+          const sub = document.createElement("div");
+          sub.className = "subline";
+          const detail = document.createElement("span");
+          detail.textContent = approval.accounts
+            ? `${approval.action || "ban_user"} • ${approval.accounts} accounts`
+            : String(approval.action);
+          const status = document.createElement("span");
+          status.textContent = approval.status || "pending";
+          sub.append(detail, status);
+          row.append(sub);
+        }
         return row;
       }));
     }
 
     async function refresh() {
+      if (inFlight) return;
+      inFlight = true;
       try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("demo") === "1") {
+          document.getElementById("demo-badge").style.display = "inline-block";
+        }
         const [eventsResponse, approvalsResponse] = await Promise.all([
-          fetch("/events?limit=50", { cache: "no-store" }),
-          fetch("/approvals?status=pending", { cache: "no-store" })
+          fetch("/overlay/events?limit=50", { cache: "no-store" }),
+          fetch("/overlay/approvals", { cache: "no-store" })
         ]);
         if (!eventsResponse.ok || !approvalsResponse.ok) throw new Error("local API request failed");
         const [events, approvals] = await Promise.all([
@@ -131,10 +400,16 @@
         renderMarkers(events.events || []);
         renderApprovals(approvals.approvals || []);
         connection.textContent = "Connected to local crew";
-        connection.style.color = "#9ce7bd";
+        connectionPill.className = "status-pill";
+        lastUpdated.textContent = `Last update: ${new Date().toLocaleTimeString()}`;
       } catch (_error) {
-        connection.textContent = "Local crew unavailable";
-        connection.style.color = "#ff9b9b";
+        addEmpty(document.getElementById("event-list"), "Local crew unavailable.");
+        addEmpty(document.getElementById("marker-list"), "Local crew unavailable.");
+        addEmpty(document.getElementById("approval-list"), "Local crew unavailable.");
+        connection.textContent = "Local crew unavailable; retrying…";
+        connectionPill.className = "status-pill offline";
+      } finally {
+        inFlight = false;
       }
     }
 

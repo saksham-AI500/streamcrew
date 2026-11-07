@@ -51,6 +51,57 @@ def _required(action: dict[str, Any], name: str) -> str:
     return value
 
 
+def validate_action(action: Any) -> str:
+    """Validate the allow-listed action and its documented request fields."""
+    if not isinstance(action, dict):
+        raise ActionError("Action must be an object.")
+    action_name = action.get("action")
+    if not isinstance(action_name, str) or action_name not in ACTION_ALLOWLIST:
+        raise ActionError("Action is not in the supported allow-list.")
+    fields = {
+        "send_chat_message": {"action", "message"},
+        "send_announcement": {"action", "message", "color"},
+        "send_shoutout": {"action", "to_broadcaster_id"},
+        "create_marker": {"action", "description"},
+        "ban_user": {"action", "user_id", "reason", "duration"},
+        "delete_message": {"action", "message_id"},
+    }[action_name]
+    if set(action) - fields:
+        raise ActionError("Action contains unsupported fields.")
+
+    if action_name in {"send_chat_message", "send_announcement"}:
+        message = _required(action, "message")
+        if len(message) > 500:
+            raise ActionError("message must be at most 500 characters.")
+    if action_name == "send_announcement":
+        color = action.get("color", "primary")
+        if not isinstance(color, str) or color not in {
+            "primary", "blue", "green", "orange", "purple"
+        }:
+            raise ActionError("Announcement color must be primary, blue, green, orange, or purple.")
+    elif action_name == "send_shoutout":
+        _required(action, "to_broadcaster_id")
+    elif action_name == "create_marker" and "description" in action:
+        description = _required(action, "description")
+        if len(description) > 140:
+            raise ActionError("description must be at most 140 characters.")
+    elif action_name == "ban_user":
+        _required(action, "user_id")
+        reason = action.get("reason")
+        if reason is not None and (not isinstance(reason, str) or len(reason) > 500):
+            raise ActionError("reason must be a string of at most 500 characters.")
+        duration = action.get("duration")
+        if duration is not None and (
+            isinstance(duration, bool)
+            or not isinstance(duration, int)
+            or not 1 <= duration <= 1_209_600
+        ):
+            raise ActionError("duration must be between 1 and 1209600 seconds.")
+    elif action_name == "delete_message":
+        _required(action, "message_id")
+    return action_name
+
+
 def execute_action(
     action: dict[str, Any],
     mode: str,
@@ -64,7 +115,9 @@ def execute_action(
     ``http_client`` is only an injection point for mocked tests. Production use
     reads credentials from the settings object loaded by ``config.py``.
     """
-    action_name = action.get("action")
+    action_name = validate_action(action)
+    if mode not in {"dry_run", "auto", "approve"}:
+        raise ActionError("Action mode must be dry_run, approve, or auto.")
     dry_run = getattr(settings, "DRY_RUN", getattr(settings, "dry_run", True))
     if dry_run:
         logger.info("would do %s (DRY_RUN is enabled)", action_name or "action")
@@ -72,14 +125,12 @@ def execute_action(
     if mode == "dry_run":
         logger.info("would do %s", action_name or "action")
         return {"status": "dry_run"}
-    if action_name not in ACTION_ALLOWLIST:
-        raise ActionError("Action is not in the supported allow-list.")
     if action_name in APPROVAL_ONLY_ACTIONS and not (
-        mode == "approve" or (mode == "auto" and approval_granted)
+        mode == "dry_run"
+        or mode == "approve"
+        or (mode == "auto" and approval_granted)
     ):
         raise ActionError(f"{action_name} can only run in approve mode.")
-    if mode not in {"auto", "approve"}:
-        raise ActionError("Action mode must be dry_run, approve, or auto.")
 
     broadcaster_id = settings.twitch_broadcaster_id
     moderator_id = broadcaster_id
@@ -161,4 +212,8 @@ def execute_action(
     if not response.is_success:
         raise ActionError(f"Twitch action {action_name} failed with HTTP {response.status_code}.")
     response_data = None if response.status_code == 204 else response.json()
+    if action_name == "send_chat_message" and isinstance(response_data, dict):
+        results = response_data.get("data", [])
+        if results and isinstance(results[0], dict) and results[0].get("is_sent") is False:
+            raise ActionError("Twitch accepted the chat request but did not send the message.")
     return {"status": "sent", "status_code": response.status_code, "data": response_data}

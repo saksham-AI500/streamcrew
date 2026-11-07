@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import secrets
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -43,19 +45,94 @@ def create_app(
         ):
             raise HTTPException(status_code=401, detail="Unauthorized")
 
+    def read_events(limit: int) -> list[dict[str, Any]]:
+        """Read events, reporting a storage outage as 503 rather than 500."""
+        try:
+            return store.list_events(limit)
+        except sqlite3.Error as error:
+            raise HTTPException(status_code=503, detail="Storage unavailable") from error
+
+    def list_approvals(status: str | None) -> list[dict[str, Any]]:
+        """Read approvals, reporting a storage outage as 503 rather than 500."""
+        try:
+            return queue.list(status)
+        except sqlite3.Error as error:
+            raise HTTPException(status_code=503, detail="Storage unavailable") from error
+
+    @app.get("/health")
+    def health() -> dict[str, str]:
+        """Report that the local API and its SQLite connection are responsive."""
+        try:
+            store._connection.execute("SELECT 1").fetchone()
+        except Exception as error:
+            raise HTTPException(status_code=503, detail="Storage unavailable") from error
+        return {"status": "ok", "service": "streamcrew"}
+
     @app.get("/events")
-    def get_events(limit: int = Query(default=50, ge=1, le=500)) -> dict[str, Any]:
-        """Return recent event-log rows."""
-        return {"events": store.list_events(limit)}
+    def get_events(
+        limit: int = Query(default=50, ge=1, le=500),
+        x_local_token: str | None = Header(default=None, alias="X-Local-Token"),
+    ) -> dict[str, Any]:
+        """Return full recent event rows to authenticated local clients."""
+        require_local_token(x_local_token)
+        return {"events": read_events(limit)}
+
+    @app.get("/overlay/events")
+    def get_overlay_events(
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> dict[str, Any]:
+        """Return event summaries only; chat payloads stay private."""
+        return {
+            "events": [
+                {
+                    "message_id": event["message_id"],
+                    "message_type": event["message_type"],
+                    "subscription_type": event["subscription_type"],
+                    "received_at": event["received_at"],
+                }
+                for event in read_events(limit)
+            ]
+        }
 
     @app.get("/approvals")
     def get_approvals(
         status: str = Query(default="pending"),
+        x_local_token: str | None = Header(default=None, alias="X-Local-Token"),
     ) -> dict[str, Any]:
-        """Return approval rows, pending by default."""
+        """Return full approval rows to authenticated local clients."""
+        require_local_token(x_local_token)
         if status not in {"pending", "approved", "rejected", "done", "failed"}:
             raise HTTPException(status_code=422, detail="Unsupported approval status")
-        return {"approvals": queue.list(status)}
+        return {"approvals": list_approvals(status)}
+
+    @app.get("/overlay/approvals")
+    def get_overlay_approvals() -> dict[str, Any]:
+        """Return only safe approval identifiers and queue metadata."""
+        summaries: list[dict[str, Any]] = []
+        for approval in list_approvals("pending"):
+            action_name = "action"
+            accounts: int | None = None
+            try:
+                parsed = json.loads(approval.get("action_json", "{}"))
+                if isinstance(parsed, dict):
+                    action_name = str(parsed.get("action") or "action")
+                    if isinstance(parsed.get("summary"), dict):
+                        accounts = int(parsed["summary"].get("accounts", 0)) or None
+                    elif isinstance(parsed.get("targets"), list):
+                        accounts = len(parsed["targets"])
+            except (ValueError, TypeError):
+                pass
+            item: dict[str, Any] = {
+                "id": approval["id"],
+                "rule_id": approval["rule_id"],
+                "action": action_name,
+                "status": approval["status"],
+                "created_at": approval["created_at"],
+            }
+            if accounts is not None:
+                item["accounts"] = accounts
+            summaries.append(item)
+        return {"approvals": summaries}
 
     @app.post("/approvals/{approval_id}/approve")
     def approve(
@@ -68,6 +145,8 @@ def create_app(
             return queue.approve(approval_id)
         except ApprovalError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
+        except sqlite3.Error as error:
+            raise HTTPException(status_code=503, detail="Storage unavailable") from error
 
     @app.post("/approvals/{approval_id}/reject")
     def reject(
@@ -80,6 +159,8 @@ def create_app(
             return queue.reject(approval_id)
         except ApprovalError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
+        except sqlite3.Error as error:
+            raise HTTPException(status_code=503, detail="Storage unavailable") from error
 
     @app.get("/overlay", response_class=HTMLResponse)
     def get_overlay() -> HTMLResponse:

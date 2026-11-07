@@ -1,0 +1,130 @@
+{
+  "messages": [
+    {
+      "metadata": {
+        "message_id": "spam-burst-001",
+        "message_type": "notification",
+        "subscription_type": "channel.chat.message",
+        "message_timestamp": "2026-11-05T12:00:01Z"
+      },
+      "payload": {
+        "event": {
+          "chatter_user_id": "bot-1001",
+          "chatter_user_login": "bot_alpha",
+          "chatter_user_name": "Bot_Alpha",
+          "message": {
+            "text": "FREE STREAM BOOST NOW!!! https://boost.example.test/a"
+          }
+        }
+      }
+    },
+    {
+      "metadata": {
+        "message_id": "spam-burst-002",
+        "message_type": "notification",
+        "subscription_type": "channel.chat.message",
+        "message_timestamp": "2026-11-05T12:00:02Z"
+      },
+      "payload": {
+        "event": {
+          "chatter_user_id": "bot-1002",
+          "chatter_user_login": "bot_bravo",
+          "chatter_user_name": "Bot_Bravo",
+          "message": {
+            "text": "free   stream boost now! https://boost.example.test/b"
+          }
+        }
+      }
+    },
+    {
+      "metadata": {
+        "message_id": "spam-burst-003",
+        "message_type": "notification",
+        "subscription_type": "channel.chat.message",
+        "message_timestamp": "2026-11-05T12:00:03Z"
+      },
+      "payload": {
+        "event": {
+          "chatter_user_id": "viewer-2001",
+          "chatter_user_login": "regular_viewer",
+          "chatter_user_name": "Regular_Viewer",
+          "message": {
+            "text": "great play on that boss round"
+          }
+        }
+      }
+    },
+    {
+      "metadata": {
+        "message_id": "spam-burst-004",
+        "message_type": "notification",
+        "subscription_type": "channel.chat.message",
+        "message_timestamp": "2026-11-05T12:00:04Z"
+      },
+      "payload": {
+        "event": {
+          "chatter_user_id": "bot-1003",
+          "chatter_user_login": "bot_charlie",
+          "chatter_user_name": "Bot_Charlie",
+          "message": {
+            "text": "Free stream boost now???"
+          }
+        }
+      }
+    },
+    {
+      "metadata": {
+        "message_id": "spam-burst-005",
+        "message_type": "notification",
+        "subscription_type": "channel.chat.message",
+        "message_timestamp": "2026-11-05T12:00:05Z"
+      },
+      "payload": {
+        "event": {
+          "chatter_user_id": "bot-1004",
+          "chatter_user_login": "bot_delta",
+          "chatter_user_name": "Bot_Delta",
+          "message": {
+            "text": "  FREE STREAM BOOST NOW... "
+          }
+        }
+      }
+    },
+    {
+      "metadata": {
+        "message_id": "spam-burst-006",
+        "message_type": "notification",
+        "subscription_type": "channel.chat.message",
+        "message_timestamp": "2026-11-05T12:00:06Z"
+      },
+      "payload": {
+        "event": {
+          "chatter_user_id": "bot-1005",
+          "chatter_user_login": "bot_echo",
+          "chatter_user_name": "Bot_Echo",
+          "message": {
+            "text": "free stream boost now"
+          }
+        }
+      }
+    },
+    {
+      "metadata": {
+        "message_id": "spam-burst-007",
+        "message_type": "notification",
+        "subscription_type": "channel.chat.message",
+        "message_timestamp": "2026-11-05T12:00:07Z"
+      },
+      "payload": {
+        "event": {
+          "chatter_user_id": "bot-1006",
+          "chatter_user_login": "bot_foxtrot",
+          "chatter_user_name": "Bot_Foxtrot",
+          "message": {
+            "text": "FREE STREAM BOOST NOW!"
+          }
+        }
+      }
+    }
+  ]
+}

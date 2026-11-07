@@ -119,3 +119,122 @@ def test_approval_cannot_be_decided_twice(tmp_path):
         queue.reject(approval_id)
         with pytest.raises(ApprovalError, match="no longer pending"):
             queue.approve(approval_id)
+
+
+def test_grouped_approval_executes_sequentially_with_pacing_and_refuses_second_approve(tmp_path):
+    """Step 4 (R5): Paced execution per target, per-target results stored, second approve refused."""
+    import json
+
+    calls = []
+    sleeps = []
+
+    def mocked_executor(action, mode, settings, **kwargs):
+        calls.append((action, mode, kwargs))
+        return {"status": "sent", "status_code": 200}
+
+    grouped_action = {
+        "action": "ban_user",
+        "duration": 600,
+        "reason": "spam burst",
+        "targets": [
+            {"user_id": "bot-1", "login": "bot_one"},
+            {"user_id": "bot-2", "login": "bot_two"},
+            {"user_id": "bot-1", "login": "bot_one_dup"},
+            {"user_id": "bot-3", "login": "bot_three"},
+        ],
+        "results": [],
+        "summary": {"accounts": 3, "messages": 6, "window_seconds": 10, "sample": "buy now"},
+    }
+
+    with SQLiteEventStore(tmp_path / "events.sqlite3") as store:
+        approval_id = store.save_approval("spam-detector", grouped_action)
+        queue = ApprovalQueue(
+            store,
+            Settings(),
+            action_executor=mocked_executor,
+            sleep=lambda secs: sleeps.append(secs),
+        )
+        result = queue.approve(approval_id)
+        row = store.get_approval(approval_id)
+        with pytest.raises(ApprovalError, match="no longer pending"):
+            queue.approve(approval_id)
+
+    assert result["status"] == "done"
+    assert row["status"] == "done"
+    assert len(calls) == 3
+    assert [c[0]["user_id"] for c in calls] == ["bot-1", "bot-2", "bot-3"]
+    assert sleeps == [0.5, 0.5]
+    saved_action = json.loads(row["action_json"])
+    assert saved_action["results"] == [
+        {"user_id": "bot-1", "ok": True, "error": None},
+        {"user_id": "bot-2", "ok": True, "error": None},
+        {"user_id": "bot-3", "ok": True, "error": None},
+    ]
+
+
+def test_grouped_approval_records_partial_failure_per_target(tmp_path):
+    """Step 4 (R5): Partial failure is recorded per target and item ends failed."""
+    import json
+
+    def flaky_executor(action, mode, settings, **kwargs):
+        if action["user_id"] == "bot-2":
+            raise RuntimeError("Helix 400: user is already banned")
+        return {"status": "sent", "status_code": 200}
+
+    grouped_action = {
+        "action": "ban_user",
+        "duration": 600,
+        "reason": "spam burst",
+        "targets": [
+            {"user_id": "bot-1", "login": "bot_one"},
+            {"user_id": "bot-2", "login": "bot_two"},
+            {"user_id": "bot-3", "login": "bot_three"},
+        ],
+        "results": [],
+    }
+
+    with SQLiteEventStore(tmp_path / "events.sqlite3") as store:
+        approval_id = store.save_approval("spam-detector", grouped_action)
+        queue = ApprovalQueue(
+            store,
+            Settings(),
+            action_executor=flaky_executor,
+            sleep=lambda _s: None,
+        )
+        result = queue.approve(approval_id)
+        row = store.get_approval(approval_id)
+
+    assert result["status"] == "failed"
+    assert result["result"]["status"] == "partial"
+    assert result["result"]["succeeded"] == 2
+    assert result["result"]["failed"] == 1
+    assert row["status"] == "failed"
+    saved_action = json.loads(row["action_json"])
+    assert saved_action["results"] == [
+        {"user_id": "bot-1", "ok": True, "error": None},
+        {"user_id": "bot-2", "ok": False, "error": "Helix 400: user is already banned"},
+        {"user_id": "bot-3", "ok": True, "error": None},
+    ]
+
+
+def test_approval_refuses_when_expected_count_mismatches(tmp_path):
+    """Approval refuses to run if human expected_count does not match actual target count."""
+    grouped_action = {
+        "action": "ban_user",
+        "targets": [
+            {"user_id": "b1", "login": "b1"},
+            {"user_id": "b2", "login": "b2"},
+        ],
+        "summary": {"accounts": 2},
+    }
+    with SQLiteEventStore(tmp_path / "events.sqlite3") as store:
+        approval_id = store.save_approval("spam-detector", grouped_action)
+        queue = ApprovalQueue(store, Settings(), action_executor=lambda *_a, **_k: {"status": "sent"})
+        with pytest.raises(ApprovalError, match="target count mismatch"):
+            queue.approve(approval_id, expected_count=3)
+        # Verify approval remained pending
+        row = store.get_approval(approval_id)
+        assert row["status"] == "pending"
+        # When expected_count matches, approve succeeds
+        res = queue.approve(approval_id, expected_count=2)
+        assert res["status"] == "done"
