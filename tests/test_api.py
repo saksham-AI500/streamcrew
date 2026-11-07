@@ -140,3 +140,16 @@ def test_overlay_page_has_loading_and_unavailable_states(tmp_path):
     assert "Loading markers" in page
     assert "Loading pending approvals" in page
     assert "Local crew unavailable; retrying" in page
+
+
+def test_landing_page_serves_interactive_simulation(tmp_path):
+    settings = SimpleNamespace(local_api_token="unit-test-local-key", dry_run=True)
+    with SQLiteEventStore(tmp_path / "events.sqlite3") as store:
+        client = TestClient(create_app(store=store, settings=settings))
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "Interactive Incident Lifecycle" in response.text
+    assert "The engine runs without Switch. The team workflow, roles, and approval gate do not." in response.text
+    assert "LOCAL_API_TOKEN" not in response.text
