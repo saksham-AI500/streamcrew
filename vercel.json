@@ -1,8 +1,3 @@
 {
-  "outputDirectory": "src/streamcrew/static",
-  "cleanUrls": true,
-  "rewrites": [
-    { "source": "/overlay", "destination": "/overlay.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "cleanUrls": true
 }
