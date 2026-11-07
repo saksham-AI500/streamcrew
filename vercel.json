@@ -1,3 +1,8 @@
 {
-  "cleanUrls": true
+  "cleanUrls": true,
+  "functions": {
+    "main.py": {
+      "includeFiles": "src/streamcrew/static/**"
+    }
+  }
 }
