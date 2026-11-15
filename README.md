@@ -2,7 +2,7 @@
 
 ![StreamCrew Cover Banner](design/screenshots/blog/01-cover-mono.png)
 
-**🔗 Live Interactive Demo & Simulation: [streamcrew-five.vercel.app](https://streamcrew-five.vercel.app/)** · **🔗 Live 1280×720 OBS Overlay HUD: [streamcrew-five.vercel.app/overlay](https://streamcrew-five.vercel.app/overlay)** · **🔗 GitHub Repository: [github.com/saksham-AI500/streamcrew](https://github.com/saksham-AI500/streamcrew)**
+**🔗 Live Interactive Demo & Simulation (Latest Build): [streamcrew-five.vercel.app](https://streamcrew-five.vercel.app/)** · **🔗 Live 1280×720 OBS Overlay HUD: [streamcrew-five.vercel.app/overlay](https://streamcrew-five.vercel.app/overlay)** · **🔗 GitHub Repository: [github.com/saksham-AI500/streamcrew](https://github.com/saksham-AI500/streamcrew)**
 
 **📄 Demo Guides:** [Click-by-Click Demo Guide](docs/DEMO_CLICK_BY_CLICK_GUIDE.md) · [Voiceover Script](docs/DEMO_VOICEOVER_SCRIPT.md) · [Architecture Spec](docs/05_TECHNICAL_ARCHITECTURE.md)
 
@@ -92,8 +92,8 @@ Every rule drafted by `@crew-producer` must pass two deterministic CLI checks be
 
 ## Visual Tour of the Application
 
-### 1. Interactive Landing Cockpit & 1-Click Browser Simulation (`streamcrew-five.vercel.app`)
-Judges and streamers can step through the entire 5-act bot-raid defense lifecycle right in the browser with zero setup:
+### 1. Interactive Landing Cockpit & 1-Click Browser Simulation ([streamcrew-five.vercel.app](https://streamcrew-five.vercel.app/))
+Live on **[streamcrew-five.vercel.app](https://streamcrew-five.vercel.app/)**: judges and streamers can inspect the interactive 3D CAD approval rig, step through the 5-act bot-raid defense lifecycle, and inspect the SQLite `/overlay/approvals` audit ledger right in the browser with zero setup:
 
 ![StreamCrew Landing Cockpit](design/screenshots/blog/05-tour-landing-hero.png)
 
@@ -102,8 +102,8 @@ Inside Switch Console, `@crew-mod` posts a clean Markdown table of pending incid
 
 ![Switch #stream-ops Incident Room](design/screenshots/blog/06-tour-switch-room.jpg)
 
-### 3. Deterministic CAD Floorplan & Live Incident Trace
-Clicking **Run Interactive Simulation** opens our real-time architectural bench rig—stepping through **01. Bot Spam Raid (6 Bots)**, **02. Prompt Injection Refusal**, and **03. Friendly Raid Shoutout** while visualizing the 8.0mm human approval airgap:
+### 3. Pseudo-3D Incident Floor & Live Pipeline Simulation
+In the **Live Sim** workspace on **[streamcrew-five.vercel.app/#simulation](https://streamcrew-five.vercel.app/#simulation)**, a tilted Canvas 2D engineering floor (`EventSub → Detector → Queue #1 → Helix Guard`) dispatches `Sam · Mod`, `@crew-mod`, `@crew-producer`, and `eventsub.py` during simulated spam raids (`Simulate Spam Raid`, Speed & Tilt controls) in sync with `#stream-ops` and the 1280×720 OBS HUD preview:
 
 ![StreamCrew Interactive CAD Simulation](design/screenshots/blog/07-tour-cad-sim.png)
 
@@ -237,7 +237,7 @@ streamcrew/
 │   ├── simulator.py                     # Deterministic fixture replay runner
 │   ├── spam.py                          # 10s sliding-window spam burst detector
 │   └── static/
-│       ├── index.html                   # Interactive web showcase & CAD simulation
+│       ├── index.html                   # Interactive carbon-black CAD showcase, pseudo-3D floor sim & audit UI
 │       └── overlay.html                 # 1280×720 OBS Studio Browser Source HUD
 ├── switch/                              # Switch agent prompts & room definitions
 ├── tests/                               # 109 offline unit & integration tests
