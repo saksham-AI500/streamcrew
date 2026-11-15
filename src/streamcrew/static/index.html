@@ -1598,9 +1598,12 @@
       align-items: center;
       gap: 8px;
     }
+    .sim-section .sim-floor-panel {
+      margin-bottom: 16px;
+    }
     .sim-section .sim-workspace {
       display: grid;
-      grid-template-columns: minmax(0, 1.32fr) minmax(0, 0.78fr);
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
       gap: 16px;
       align-items: start;
     }
@@ -1608,6 +1611,13 @@
     .sim-section .cockpit-stack,
     .sim-section .map-canvas-wrap {
       min-inline-size: 0;
+    }
+    .sim-section .panel-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 12px;
     }
     .sim-section .act-btn,
     .sim-section .story-banner,
@@ -2787,7 +2797,6 @@
           <div>
             <p class="eyebrow" style="margin-bottom: 10px;">[ 03 ] LIVE SIMULATION</p>
             <h2 id="sim-title">Interactive Incident Lifecycle &amp; <span class="sweep" data-sweep>System Topology</span></h2>
-            <p>Tilted pseudo-3D StreamCrew floor and approval pipeline (EventSub → Detector → Queue #1 → Helix Guard). Watch bots hit the Helix gate while Sam, <code>@crew-mod</code>, <code>@crew-producer</code>, and <code>eventsub.py</code> coordinate through Switch.</p>
           </div>
           <div class="sim-head-right">
             <div class="sim-status-chip" aria-live="polite">
@@ -2799,7 +2808,7 @@
               <button class="btn btn-secondary" id="trigger-incident-btn" type="button">Simulate Spam Raid</button>
               <button class="btn btn-secondary" id="prev-step" type="button">← Prev Act</button>
               <button class="btn btn-secondary" id="next-step" type="button">Next Act →</button>
-              <button class="btn btn-secondary" id="safety-refusal-btn" type="button">Test “Ban Everyone” Refusal</button>
+              <button class="btn btn-secondary" id="safety-refusal-btn" type="button">Test Refusal Guard</button>
             </div>
           </div>
         </div>
@@ -2847,47 +2856,52 @@
         <div class="story-banner cm" aria-live="polite">
           <p class="story-text">
             <span class="story-lead" id="story-title">Act 1: Bot Raid Wave Hits. </span>
-            <span id="story-desc">Six coordinated bot accounts flood Twitch chat with identical scam text within 3 seconds. EventSub WebSocket streams frames into the local engine.</span>
+            <span id="story-desc">Six coordinated bot accounts flood Twitch chat with identical scam text within 3 seconds.</span>
           </p>
-          <span class="story-badge" id="story-badge">Simulated burst · Real detector code</span>
+          <span class="story-badge" id="story-badge">Simulated burst</span>
         </div>
 
-        <!-- Split Workspace: Left = Pseudo-3D Floor + Telemetry + Log, Right = Switch Room & OBS HUD -->
+        <!-- Full-Width Pseudo-3D Engineering Floor -->
+        <div class="panel cm sim-floor-panel">
+          <div class="panel-header">
+            <span>STREAMCREW INCIDENT FLOOR</span>
+            <span class="status-pill status-normal" id="map-status-pill">● STREAM NORMAL · GATE ARMED</span>
+          </div>
+          <div class="map-canvas-wrap">
+            <div class="sim-stage">
+              <canvas id="sim-canvas" class="sim-canvas" role="img" aria-label="Tilted pseudo-3D StreamCrew floor with six stations surrounding a four-stage approval pipeline: EventSub, Detector, Queue #1, Helix Guard."></canvas>
+            </div>
+            <div class="sim-ctrl-bar">
+              <div class="sim-sliders">
+                <label class="sim-slider" for="sim-speed">
+                  <span>Speed</span>
+                  <input id="sim-speed" type="range" min="0.5" max="3" step="0.5" value="1">
+                  <output id="sim-speed-out" for="sim-speed">1×</output>
+                </label>
+                <label class="sim-slider" for="sim-tilt">
+                  <span>Tilt</span>
+                  <input id="sim-tilt" type="range" min="0.4" max="0.8" step="0.02" value="0.58">
+                  <output id="sim-tilt-out" for="sim-tilt">0.58</output>
+                </label>
+              </div>
+              <div class="map-legend">
+                <span class="legend-item"><i class="swatch" style="background: #5de1ff"></i> Chat Frame</span>
+                <span class="legend-item"><i class="swatch" style="background: #ffb347"></i> Queue #1</span>
+                <span class="legend-item"><i class="swatch" style="background: #ff5c6c"></i> Refused</span>
+                <span class="legend-item"><i class="swatch" style="background: #ffd23f"></i> Dispatch</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Split Lower Workspace: Left = Telemetry & Incident Log, Right = Switch Room & OBS HUD -->
         <div class="sim-workspace">
-          <!-- Left: Pseudo-3D Engineering Floor & Pipeline Simulation -->
           <div class="panel cm">
             <div class="panel-header">
-              <span>STREAMCREW INCIDENT FLOOR · CLICK PIPELINE NODE OR STATION TO INSPECT</span>
-              <span class="status-pill status-normal" id="map-status-pill">● STREAM NORMAL · GATE ARMED</span>
+              <span>PIPELINE TELEMETRY &amp; LOG</span>
+              <span>DRY_RUN=TRUE</span>
             </div>
             <div class="map-canvas-wrap">
-              <div class="sim-stage">
-                <canvas id="sim-canvas" class="sim-canvas" role="img" aria-label="Tilted pseudo-3D StreamCrew floor with six stations (Moderator, Switch Mod, Live Stream, Chat Ingest, Rule Producer, and empty Auto-Ban Bot) surrounding a four-stage approval pipeline: EventSub, Detector, Queue #1, Helix Guard. Crew walk to the pipeline during spam raids."></canvas>
-              </div>
-
-              <div class="sim-ctrl-bar">
-                <div class="sim-sliders">
-                  <label class="sim-slider" for="sim-speed">
-                    <span>Speed</span>
-                    <input id="sim-speed" type="range" min="0.5" max="3" step="0.5" value="1">
-                    <output id="sim-speed-out" for="sim-speed">1×</output>
-                  </label>
-                  <label class="sim-slider" for="sim-tilt">
-                    <span>Tilt</span>
-                    <input id="sim-tilt" type="range" min="0.4" max="0.8" step="0.02" value="0.58">
-                    <output id="sim-tilt-out" for="sim-tilt">0.58</output>
-                  </label>
-                </div>
-                <div class="sim-node-tabs" role="group" aria-label="Inspect pipeline or workspace node">
-                  <button class="sim-node-tab selected" type="button" data-select-node="twitch">1. EventSub</button>
-                  <button class="sim-node-tab" type="button" data-select-node="detector">2. Detector</button>
-                  <button class="sim-node-tab" type="button" data-select-node="queue">3. Queue #1</button>
-                  <button class="sim-node-tab" type="button" data-select-node="helix">4. Helix Guard</button>
-                  <button class="sim-node-tab" type="button" data-select-node="switch">5. #stream-ops</button>
-                  <button class="sim-node-tab" type="button" data-select-node="overlay">6. OBS Overlay</button>
-                </div>
-              </div>
-
               <div class="sim-metrics-grid">
                 <div class="sim-stat-card">
                   <span>Chat frames scanned</span>
@@ -2906,32 +2920,14 @@
                   <ul class="sim-event-log" id="sim-event-log" aria-live="polite"></ul>
                 </div>
               </div>
-
-              <!-- Node Telemetry Inspector Output -->
-              <div class="inspector-box" aria-live="polite">
-                <div class="inspector-head">
-                  <span id="inspector-title">NODE 1 · EventSub Ingest (fixtures/spam_burst.json)</span>
-                  <span>ZERO TOKEN EXPOSURE</span>
-                </div>
-                <pre class="inspector-code" id="inspector-payload"></pre>
-              </div>
-
-              <div class="map-legend">
-                <span class="legend-item"><i class="swatch" style="background: #5de1ff"></i> Normal Chat Frame</span>
-                <span class="legend-item"><i class="swatch" style="background: #ffb347"></i> Grouped in Queue #1</span>
-                <span class="legend-item"><i class="swatch" style="background: #ff5c6c"></i> Blocked Unapproved Ban</span>
-                <span class="legend-item"><i class="swatch" style="background: #ffd23f"></i> Switch / CLI Dispatch Link</span>
-              </div>
             </div>
           </div>
 
-          <!-- Right: Synchronized Switch Room (#stream-ops) + OBS Overlay Preview -->
           <div class="cockpit-stack">
-            <!-- Switch Room Panel -->
             <div class="panel cm">
               <div class="panel-header">
-                <span>SWITCH ROOM · #stream-ops (2 Humans · 2 Agents)</span>
-                <span>NO TWITCH TOKEN IN ROOM</span>
+                <span>SWITCH ROOM · #STREAM-OPS</span>
+                <span>NO TWITCH TOKEN</span>
               </div>
               <div class="chat-list" id="switch-chat-log" aria-live="polite"></div>
               <div class="quick-prompts">
@@ -2942,10 +2938,9 @@
               </div>
             </div>
 
-            <!-- Mini OBS HUD Panel -->
             <div class="panel cm">
               <div class="panel-header">
-                <span>OBS BROWSER SOURCE PREVIEW (1280×720 HUD)</span>
+                <span>OBS HUD PREVIEW (1280×720)</span>
                 <span class="status-pill status-alert" id="hud-pill">● 1 PENDING APPROVAL</span>
               </div>
               <div class="hud-preview">
@@ -2963,18 +2958,6 @@
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Live Local Engine Connection Bar -->
-        <div class="live-sync-bar">
-          <div>
-            <strong>Connected to Local StreamCrew SQLite Engine:</strong>
-            <span id="live-api-status" style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); margin-left: 8px;">Checking /health…</span>
-          </div>
-          <div style="display: flex; gap: 10px;">
-            <button class="btn btn-secondary" id="refresh-live-btn" type="button">Sync Live /overlay/approvals</button>
-            <a class="btn btn-secondary" href="/overlay">Open Fullscreen OBS Overlay →</a>
           </div>
         </div>
       </div>
@@ -3408,8 +3391,8 @@
         RIPPLE_Z: 34,
         PRE_RUN_STEPS: 60,
         PRE_RUN_DT: 0.05,
-        FIRST_INCIDENT_AT: 7,
-        NEXT_INCIDENT_GAP: 20,
+        FIRST_INCIDENT_AT: 1.0,
+        NEXT_INCIDENT_GAP: 9,
         UI_INTERVAL_MS: 250,
         DT_MAX: 0.05,
         LOG_MAX: 6,
@@ -3561,6 +3544,7 @@
       ND.forEach((n) => STAT.push({ y: CONFIG.NODE_Y2 + n.i * 0.01, f: () => nodeDraw(n) }));
 
       let tilt = CONFIG.TILT_DEFAULT;
+      let targetTilt = CONFIG.TILT_DEFAULT;
       let HL = CONFIG.TOP + CONFIG.H_WORLD * tilt + CONFIG.HEIGHT_PAD;
       let sc = 1;
       let dpr = 1;
@@ -3580,14 +3564,14 @@
       let selectedNodeKey = "twitch";
       let currentAct = 0;
       let userPinnedAct = false;
-      let simVisible = true;
+      let simVisible = false;
+      let autoStartedOnView = false;
       let rafId = 0;
 
       const reduceMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
       let running = !reduceMQ.matches;
 
       const actButtons = Array.from(document.querySelectorAll(".act-btn"));
-      const nodeTabButtons = Array.from(document.querySelectorAll(".sim-node-tab"));
       const storyTitle = document.getElementById("story-title");
       const storyDesc = document.getElementById("story-desc");
       const storyBadge = document.getElementById("story-badge");
@@ -3597,8 +3581,6 @@
       const hudTargets = document.getElementById("hud-target-count");
       const hudDecidedBy = document.getElementById("hud-decided-by");
       const chatLog = document.getElementById("switch-chat-log");
-      const inspectorTitle = document.getElementById("inspector-title");
-      const inspectorPayload = document.getElementById("inspector-payload");
       const playToggle = document.getElementById("play-toggle");
       const triggerIncBtn = document.getElementById("trigger-incident-btn");
       const speedInput = document.getElementById("sim-speed");
@@ -3739,12 +3721,45 @@
 
       function selectNode(nodeKey) {
         selectedNodeKey = NODE_PAYLOADS[nodeKey] ? nodeKey : "twitch";
-        const info = NODE_PAYLOADS[selectedNodeKey];
-        nodeTabButtons.forEach((btn) => {
-          btn.classList.toggle("selected", btn.getAttribute("data-select-node") === selectedNodeKey);
-        });
-        inspectorTitle.textContent = info.label;
-        inspectorPayload.textContent = info.code;
+        render();
+      }
+
+      function syncSceneToAct(idx) {
+        inc = null;
+        nextInc = T + CONFIG.NEXT_INCIDENT_GAP;
+        if (idx === 0) {
+          gw = false;
+          retries = Math.max(retries, 3);
+          PPL.forEach(recallEngineer);
+          say("Act 1: Spam wave active · Helix Guard locked", "bad");
+        } else if (idx === 1) {
+          gw = false;
+          retries = Math.max(retries, 5);
+          sendEngineer("Sam · Mod");
+          PPL.filter((p) => p.name !== "Sam · Mod").forEach(recallEngineer);
+          say("Act 2: Sam · Mod inspects Queue #1 (6 bots locked)");
+        } else if (idx === 2) {
+          gw = false;
+          retries = Math.max(retries, 6);
+          sendEngineer("Sam · Mod");
+          sendEngineer("@crew-mod");
+          sendEngineer("@crew-producer");
+          PPL.filter((p) => p.name === "eventsub.py").forEach(recallEngineer);
+          say("Act 3: Switch room triage & Refusal Guard active", "bad");
+        } else if (idx === 3) {
+          gw = true;
+          sendEngineer("Sam · Mod");
+          sendEngineer("@crew-mod");
+          sendEngineer("@crew-producer");
+          sendEngineer("eventsub.py");
+          say("Act 4: Approved (--by Sam) · Helix draining 0.5 s pace", "good");
+        } else {
+          gw = true;
+          retries = 0;
+          PPL.forEach(recallEngineer);
+          say("Act 5: Queue drained · crew returns to desks", "good");
+        }
+        ui();
         render();
       }
 
@@ -3798,19 +3813,14 @@
 
         if (!opts || !opts.keepNode) {
           selectedNodeKey = act.defaultNode;
-          const info = NODE_PAYLOADS[selectedNodeKey] || NODE_PAYLOADS.twitch;
-          nodeTabButtons.forEach((btn) => {
-            btn.classList.toggle("selected", btn.getAttribute("data-select-node") === selectedNodeKey);
-          });
-          inspectorTitle.textContent = info.label;
-          inspectorPayload.textContent = info.code;
         }
         renderChat(act.chat);
       }
 
-      function startInc() {
-        if (inc) return;
+      function startInc(force) {
+        if (inc && !force) return;
         userPinnedAct = false;
+        PPL.forEach(recallEngineer);
         inc = {
           t: 0,
           ev: [
@@ -4003,8 +4013,6 @@
         const col = ["#d4d4d8", "#ffb347", "#d85a30"][st];
         const top = ["#16161b", "#281e11", "#2b140e"][st];
         ctx.save();
-        ctx.shadowColor = col;
-        ctx.shadowBlur = st ? 10 + 6 * Math.sin(T * 6) : 0;
         if (n.i === 3) ctx.setLineDash([5, 4]);
         box(n.x, CONFIG.NODE_Y1, n.x + n.w, CONFIG.NODE_Y2, CONFIG.NODE_H, {
           z0: CONFIG.NODE_Z0,
@@ -4014,6 +4022,21 @@
           stroke: col
         });
         ctx.restore();
+        if (st > 0) {
+          const pulse = 0.25 + 0.25 * Math.sin(T * 5);
+          const pad = 3;
+          poly(
+            [
+              P(n.x - pad, CONFIG.NODE_Y1 - pad, CONFIG.NODE_Z0),
+              P(n.x + n.w + pad, CONFIG.NODE_Y1 - pad, CONFIG.NODE_Z0),
+              P(n.x + n.w + pad, CONFIG.NODE_Y2 + pad, CONFIG.NODE_Z0),
+              P(n.x - pad, CONFIG.NODE_Y2 + pad, CONFIG.NODE_Z0)
+            ],
+            null,
+            st === 2 ? "rgba(216,90,48," + pulse + ")" : "rgba(255,179,71," + pulse + ")",
+            2
+          );
+        }
         if (selectedNodeKey === n.key) {
           const topZ = CONFIG.NODE_Z0 + CONFIG.NODE_H + 1;
           poly(
@@ -4095,15 +4118,18 @@
           for (let i = 0; i < 4; i++) {
             const s = p.s - p.d * i * 9;
             const [ax, ay] = P(CONFIG.PIPE_START_X + s, CONFIG.PIPE_Y, CONFIG.PACKET_Z + Math.sin(T * 8 + p.s / 20) * 1.5);
-            ctx.fillStyle = "rgba(" + col + "," + (0.9 - i * 0.22) + ")";
-            ctx.shadowColor = "rgb(" + col + ")";
-            ctx.shadowBlur = i ? 0 : 12;
+            if (i === 0) {
+              ctx.fillStyle = "rgba(" + col + ",0.22)";
+              ctx.beginPath();
+              ctx.arc(ax, ay, 8.5 * pipeK, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.fillStyle = "rgba(" + col + "," + (0.95 - i * 0.22) + ")";
             ctx.beginPath();
             ctx.arc(ax, ay, (5 - i * 0.9) * pipeK, 0, Math.PI * 2);
             ctx.fill();
           }
         }
-        ctx.shadowBlur = 0;
         for (const p of PPL) {
           if (p.la < 0.02 || p.node < 0) continue;
           const n = ND[p.node];
@@ -4113,8 +4139,6 @@
           ctx.save();
           ctx.globalAlpha = p.la;
           ctx.strokeStyle = "#ffd23f";
-          ctx.shadowColor = "#ffd23f";
-          ctx.shadowBlur = 8;
           ctx.lineWidth = 2;
           ctx.setLineDash([9, 6]);
           ctx.lineDashOffset = -T * 40;
@@ -4172,6 +4196,10 @@
         if (!running || !simVisible || document.hidden) return;
         const dt = Math.min((now - last) / 1000, CONFIG.DT_MAX);
         last = now;
+        if (Math.abs(targetTilt - tilt) > 0.0005) {
+          tilt += (targetTilt - tilt) * Math.min(1, dt * 12);
+          resize();
+        }
         tick(dt * sp);
         render();
         if (now - lastUi > CONFIG.UI_INTERVAL_MS) {
@@ -4225,21 +4253,24 @@
         }
       });
 
-      nodeTabButtons.forEach((btn) => {
-        btn.addEventListener("click", () => selectNode(btn.getAttribute("data-select-node")));
-      });
+      function jumpToAct(idx) {
+        userPinnedAct = true;
+        const target = (idx + ACTS.length) % ACTS.length;
+        renderAct(target);
+        syncSceneToAct(target);
+      }
 
       actButtons.forEach((btn) => {
         btn.addEventListener("click", () => {
-          userPinnedAct = true;
-          renderAct(parseInt(btn.getAttribute("data-act"), 10));
+          jumpToAct(parseInt(btn.getAttribute("data-act"), 10));
         });
       });
 
       playToggle.addEventListener("click", () => setRunningState(!running));
 
       triggerIncBtn.addEventListener("click", () => {
-        startInc();
+        if (!running) setRunningState(true);
+        startInc(true);
         ui();
         render();
       });
@@ -4250,56 +4281,36 @@
       });
 
       tiltInput.addEventListener("input", (e) => {
-        tilt = parseFloat(e.target.value) || CONFIG.TILT_DEFAULT;
-        tiltOut.textContent = tilt.toFixed(2);
-        resize();
-        render();
+        targetTilt = parseFloat(e.target.value) || CONFIG.TILT_DEFAULT;
+        tiltOut.textContent = targetTilt.toFixed(2);
+        if (!running) {
+          tilt = targetTilt;
+          resize();
+          render();
+        }
       });
 
       document.getElementById("prev-step").addEventListener("click", () => {
-        userPinnedAct = true;
-        renderAct(currentAct - 1);
+        jumpToAct(currentAct - 1);
       });
 
       document.getElementById("next-step").addEventListener("click", () => {
-        userPinnedAct = true;
-        renderAct(currentAct + 1);
+        jumpToAct(currentAct + 1);
       });
 
       document.getElementById("safety-refusal-btn").addEventListener("click", () => {
-        userPinnedAct = true;
-        renderAct(2);
+        jumpToAct(2);
       });
 
       document.getElementById("chip-refuse").addEventListener("click", () => {
-        userPinnedAct = true;
-        renderAct(2);
+        jumpToAct(2);
       });
 
       Array.from(document.querySelectorAll("[data-act-jump]")).forEach((btn) => {
         btn.addEventListener("click", () => {
-          userPinnedAct = true;
-          renderAct(parseInt(btn.getAttribute("data-act-jump"), 10));
+          jumpToAct(parseInt(btn.getAttribute("data-act-jump"), 10));
         });
       });
-
-      // Live local backend sync (/health and /overlay/approvals)
-      const liveStatusEl = document.getElementById("live-api-status");
-      async function syncLiveBackend() {
-        try {
-          const healthRes = await fetch("/health");
-          if (!healthRes.ok) throw new Error("API status " + healthRes.status);
-          const appRes = await fetch("/overlay/approvals");
-          const appData = await appRes.json();
-          const count = Array.isArray(appData.approvals) ? appData.approvals.length : 0;
-          liveStatusEl.textContent = "ONLINE · " + count + " real pending approval(s) in data/events.sqlite3";
-          liveStatusEl.style.color = "var(--green)";
-        } catch (err) {
-          liveStatusEl.textContent = "Simulation Mode (Run ‘crew serve’ for live SQLite sync)";
-          liveStatusEl.style.color = "var(--text-secondary)";
-        }
-      }
-      document.getElementById("refresh-live-btn").addEventListener("click", syncLiveBackend);
 
       window.addEventListener("resize", () => {
         resize();
@@ -4315,9 +4326,17 @@
       if ("IntersectionObserver" in window) {
         new IntersectionObserver((entries) => {
           simVisible = entries[0] ? entries[0].isIntersecting : true;
-          if (simVisible) scheduleFrame();
-          else stopFrame();
-        }, { threshold: 0.02 }).observe(simSection);
+          if (simVisible) {
+            if (!autoStartedOnView && !reduceMQ.matches) {
+              autoStartedOnView = true;
+              if (!running) setRunningState(true);
+              startInc(true);
+            }
+            scheduleFrame();
+          } else {
+            stopFrame();
+          }
+        }, { threshold: 0.05 }).observe(simSection);
       }
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) stopFrame();
@@ -4330,7 +4349,6 @@
       renderAct(0);
       render();
       ui();
-      syncLiveBackend();
 
       if (reduceMQ.matches) {
         setRunningState(false);
